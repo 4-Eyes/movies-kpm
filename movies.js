@@ -14,6 +14,10 @@ var error = function(api, err) {
 exports.run = function (api, event) {
     var words = event.body.split(" ");
     words.splice(0, 1);
+    if (words.length === 0) {
+        api.sendMessage("Well you didn't tell me to do anything so I shant.");
+        return;
+    }
     var secondaryCommand = words.splice(0, 1)[0];
     switch (secondaryCommand) {
         case "-apiKey":
