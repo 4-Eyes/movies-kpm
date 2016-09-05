@@ -1,0 +1,11 @@
+﻿{
+  "name": "movies",
+  "version": 1.0,
+  "startup": "movies.js",
+  "help": [
+    [
+      "{{commandPrefix}}movies {movie title}",
+      "Searches for the given movie and returns details on it if it can find it."
+    ]
+  ]
+}
