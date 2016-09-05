@@ -53,12 +53,20 @@ exports.run = function (api, event) {
                                 error(api, event, err);
                                 return;
                             }
-                    var message = "Title: " + movie.title + "\n";
-                    message += "IMDb Rating: " + movie.imdb.rating + "\n";
-                    message += "RottenTomatoes: " + (movie.tomato == null ?  "N/A" : movie.tomato.meter + "%")+ "\n";
-                    message += "Metacritic: " + (movie.metacritic == null ? "N/A" : movie.metacritic) + "\n";
-                    api.sendMessage(message, event.thread_id);
 
+                            api.sendImage('url', movie.poster, '', event.thread_id);
+
+                            let imdbRating = movie.imdb ?  movie.imdb.rating : 'N/A',
+                                tomatoesRating = movie.tomato ? movie.tomato.meter + '%' : 'N/A',
+                                metacriticRating = movie.metacritic ? movie.metacritic : 'N/A';
+
+                            setTimeout(() => { // try let the image render first
+                                let message = `${movie.title}\n------------------------------------\n${movie.plot}\n\n`;
+                                message += `IMDB Rating: \t${imdbRating}\tRottenTomatoes: \t${tomatoesRating}\n`;
+                                message += `Metacritic:  \t${metacriticRating}\tRuntime:        \t${movie.runtime} mins\n`;
+
+                                api.sendMessage(message, event.thread_id);
+                            }, 200);
                         });
                 });
         } else {
