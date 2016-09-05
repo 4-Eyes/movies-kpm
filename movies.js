@@ -3,33 +3,29 @@ var omdb = require('omdb');
 var movieDBFunction = require('moviedb');
 var movieDB = null;
 
-exports.match = function(text, commandPrefix) {
-    return text.startsWith(commandPrefix + "movies");
-}
-
-var error = function(api, err) {
-    api.sendMessage("There was an error: " + err);
+var error = function(api, event, err) {
+    api.sendMessage("There was an error: " + err, event.thread_id);
 }
 
 exports.run = function (api, event) {
     var words = event.body.split(" ");
     words.splice(0, 1);
     if (words.length === 0) {
-        api.sendMessage("Well you didn't tell me to do anything so I shant.");
+        api.sendMessage("Well you didn't tell me to do anything so I shant.", event.thread_id);
         return;
     }
     var secondaryCommand = words.splice(0, 1)[0];
     switch (secondaryCommand) {
         case "-apiKey":
             exports.config.APIKey = words[0];
-            api.sendMessage("Successfullly added the API Key: " + words[0]);
+            api.sendMessage("Successfullly added the API Key: " + words[0], event.thread_id);
             return;
         default:
             words.splice(0, 0, secondaryCommand);
     }
     if (movieDB == null) {
         if (exports.config.APIKey == null) {
-            api.sendMessage("You need a TMDB API key for this module to work.");
+            api.sendMessage("You need a TMDB API key for this module to work.", event.thread_id);
             return;
         }
         movieDB = movieDBFunction(exports.config.APIKey);
@@ -37,7 +33,7 @@ exports.run = function (api, event) {
     var title = words.join(" ");
     movieDB.searchMovie({ query: title }, function (err, res) {
         if (err) {
-            error(api, err);
+            error(api, event, err);
             return;
         }
         if (res.results.length > 0) {
@@ -47,26 +43,26 @@ exports.run = function (api, event) {
             movieDB.movieInfo({ id: res.results[0].id, append_to_response: "external_ids" },
                 function(err, res) {
                     if (err) {
-                        error(api, err);
+                        error(api, event, err);
                         return;
                     }
                     omdb.get({ imdb: res.imdb_id },
                         { tomatoes: true },
                         function(err, movie) {
                             if (err) {
-                                error(api, err);
+                                error(api, event, err);
                                 return;
                             }
                     var message = "Title: " + movie.title + "\n";
                     message += "IMDb Rating: " + movie.imdb.rating + "\n";
                     message += "RottenTomatoes: " + (movie.tomato == null ?  "N/A" : movie.tomato.meter + "%")+ "\n";
                     message += "Metacritic: " + (movie.metacritic == null ? "N/A" : movie.metacritic) + "\n";
-                    api.sendMessage(message);
+                    api.sendMessage(message, event.thread_id);
 
                         });
                 });
         } else {
-            error(api, "No results for the movie title given");
+            error(api, event, "No results for the movie title given");
         }
     });
 }
