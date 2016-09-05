@@ -37,6 +37,9 @@ exports.run = function (api, event) {
             return;
         }
         if (res.results.length > 0) {
+            res.results.sort(function(a, b) {
+                return b.popularity - a.popularity;
+            });
             movieDB.movieInfo({ id: res.results[0].id, append_to_response: "external_ids" },
                 function(err, res) {
                     if (err) {
