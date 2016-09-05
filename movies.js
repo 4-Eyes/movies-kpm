@@ -18,6 +18,7 @@ exports.run = function (api, event) {
     switch (secondaryCommand) {
         case "-apiKey":
             exports.config.APIKey = words[0];
+            api.sendMessage("Successfullly added the API Key: " + words[0]);
             return;
         default:
             words.splice(0, 0, secondaryCommand);
