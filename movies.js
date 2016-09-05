@@ -54,7 +54,7 @@ exports.run = (api, event) => {
 
                             api.sendImage('url', movie.poster, '', event.thread_id);
 
-                            let imdbRating = movie.imdb ?  movie.imdb.rating : 'N/A';
+                            let imdbRating = movie.imdb.rating;
                             let tomatoesRating = movie.tomato ? `${movie.tomato.meter}%` : 'N/A';
                             let metacriticRating = movie.metacritic ? movie.metacritic : 'N/A';
 
