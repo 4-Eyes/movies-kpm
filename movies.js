@@ -76,10 +76,6 @@ const sendMovieData = (api, event, imdbID) =>
 }
 
 exports.run = (api, event) => {
-    flicks.getNowPlaying(function(error, res, body) {
-        console.log(body);
-    });
-    return;
     let sessionConfig = {};
     for (let i = 1; i < event.arguments.length; i++) {
         let arg = event.arguments[i],
