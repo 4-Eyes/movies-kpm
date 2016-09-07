@@ -18,6 +18,13 @@ module.exports = function(requests) {
                 headers: auth
             };
             request(options, callback);
+        },
+        getNowPlaying: function(callback) {
+            const options = {
+                url: apiUrl + "movies/now-playing",
+                headers: auth
+            };
+            request(options, callback);
         }
     }
 }
