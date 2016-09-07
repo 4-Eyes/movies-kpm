@@ -1,6 +1,7 @@
 ﻿let request = require('request'),
     omdb = require('omdb'),
     movieDBFunction = require('moviedb'),
+    flicks = require("./src/flicks.js")(request),
     movieDB = null;
 
 let options = [
