@@ -2,14 +2,16 @@
     omdb = require('omdb'),
     movieDBFunction = require('moviedb'),
     flicks = require("./src/flicks.js")(request),
-    movieDB = null;
+    movieDB = null,
+    searchCache = {},
+    sortBy = require("./src/sorting.js")();
 
 let options = [
         {
             long: '--key',
             short: '-k',
             description: 'Sets the TMDB API key',
-            expects: ['KEY'],
+            expects: ['<string>KEY'],
             run : (values) => {
                 exports.config.APIKey = values[0];
                 values[1].sendMessage(`Successfully added the API Key: ${values[0]}`, values[2].thread_id);
@@ -19,13 +21,32 @@ let options = [
             long: '--search',
             short: '-s',
             description: 'Returns search results for a title',
-            expects: ['QUERY'],
+            config: true
+        },
+        {
+            long: '--searchResponse',
+            short: '-sr',
+            description: 'Returns details on the movie specified by the results number based on numbering of the last search on the thread the command comes from',
+            expects: ['<int>RESULTNO'],
             config: true
         },
         {
             long: '--recommend',
             short: '-r',
             description: 'Recommends you a movie',
+            config: true
+        },
+        {
+            long: '--year',
+            short: '-y',
+            description: 'Filters movies by the specified year',
+            expects:['<int>YEAR'],
+            config: true
+        },
+        {
+            long: '--coming',
+            short: '-c',
+            description: 'Gives results of movies coming soon. Currently this will only work for NZ',
             config: true
         }
     ];
@@ -34,8 +55,8 @@ const error = (api, event, err) => {
     api.sendMessage(`There was an error: ${err}`, event.thread_id);
 };
 
-const performChecks = function (api, event) {
-    if (!event.arguments || event.arguments.length === 0) {
+const performChecks = function (api, event, sessConfig) {
+    if ((!event.arguments || event.arguments.length === 0) && Object.keys(sessConfig).length === 0 && sessConfig.constructor === Object) {
         api.sendMessage("Well you didn't tell me to do anything so I shant.", event.thread_id);
         return false;
     }
@@ -47,6 +68,15 @@ const performChecks = function (api, event) {
         movieDB = movieDBFunction(exports.config.APIKey);
     }
     return true;
+}
+
+const formatSearch = function(results) {
+    let message = "";
+    for (let i = 0; i < results.length; i++) {
+        let result = results[i];
+        message += (i + 1) + ") " + result.title + " (" + result.release_date.slice(0, 4) + ")\n";
+    }
+    return message;
 }
 
 const sendMovieData = (api, event, imdbID) =>
@@ -91,6 +121,9 @@ exports.run = (api, event) => {
         let vals = [],
             count = (pargs[0].expects || {}).length || 0;
         for (let j = 1; j <= count; j++) {
+            if (!event.arguments[i + j]) {
+                error(api, event, "Invalid number of arguments given");
+            }
             vals.push(event.arguments[i + j]);
         }
 
@@ -113,24 +146,63 @@ exports.run = (api, event) => {
     const words = event.arguments;
     words.splice(0, 1);
     const title = words.join(" ");
-    if (!performChecks(api, event)) return;
+    if (!performChecks(api, event, sessionConfig)) return;
 
 
-
+    if (sessionConfig['-r'] || sessionConfig['c']) {
+        error(api, event, "This hasn't been implemented yet. Blame the lazy devs.");
+        return;
+    }
+    if (sessionConfig['-sr']) {
+        let index = parseInt(sessionConfig['-sr']) - 1;
+        if (index === NaN || index >= searchCache[event.thread_id].length) {
+            error(api, event, "Well that's not a number or it's an invalid number. Silly person.")
+            return;
+        }
+        movieDB.movieInfo({id: searchCache[event.thread_id][index].id, append_to_response: "external_ids"},
+            (er, rs) => {
+                if (er) {
+                    error(api, event, er);
+                }
+                sendMovieData(api, event, rs.imdb_id);
+            });
+        return;
+    }
     movieDB.searchMovie({ query: title }, (err, res) => {
         if (err) {
             error(api, event, err);
             return;
         }
         if (res.results.length > 0) {
-            res.results.sort((a, b) => b.popularity - a.popularity);
+            if (sessionConfig['-y']) {
+                res.results.sort(sortBy(
+                    {
+                        name:'release_date',
+                        primer: function(item) {
+                            return Math.abs(parseInt(item.slice(0, 4)) - parseInt(sessionConfig['-y'][0]));
+                        }
+                    },
+                    {
+                        name:'popularity',
+                        reverse:true
+                    })
+                );
+            } else {
+                res.results.sort((a, b) => b.popularity - a.popularity);
+            }
+            if (sessionConfig['-s']) {
+                searchCache[event.thread_id] = res.results;
+                const message = formatSearch(res.results);
+                api.sendMessage(message, event.thread_id);
+                return;
+            }
             movieDB.movieInfo({ id: res.results[0].id, append_to_response: "external_ids" },
-                (err, res) => {
-                    if (err) {
-                        error(api, event, err);
+                (err1, res1) => {
+                    if (err1) {
+                        error(api, event, err1);
                         return;
                     }
-                    sendMovieData(api, event, res.imdb_id);
+                    sendMovieData(api, event, res1.imdb_id);
                 });
         } else {
             error(api, event, "No results for the movie title given");
