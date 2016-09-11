@@ -155,7 +155,7 @@ exports.run = (api, event) => {
     }
     if (sessionConfig['-sr']) {
         let index = parseInt(sessionConfig['-sr']) - 1;
-        if (index === NaN || index >= searchCache[event.thread_id].length) {
+        if (!index || index === NaN || index >= searchCache[event.thread_id].length) {
             error(api, event, "Well that's not a number or it's an invalid number. Silly person.")
             return;
         }
