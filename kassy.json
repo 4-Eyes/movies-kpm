@@ -1,6 +1,6 @@
 ﻿{
   "name": "movies",
-  "version": 1.03,
+  "version": 1.04,
   "startup": "movies.js",
   "command": "movies",
   "help": [
