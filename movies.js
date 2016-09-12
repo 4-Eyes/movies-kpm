@@ -185,7 +185,7 @@ const sendComingSoon = function (api, event, results) {
             let imdbRating = result.imdb.rating ? result.imdb.rating : 'N/A';
             let tomatoesRating = result.tomato ? `${result.tomato.meter}%` : 'N/A';
             let metacriticRating = result.metacritic ? result.metacritic : 'N/A';
-            message += `${i + 1 - numMin}) ${result.title}\t$IMDb: ${imdbRating}\tRT: ${tomatoesRating}\tMC: ${metacriticRating}\n`;
+            message += `${i + 1 - numMin}) ${result.title}\tIMDb: ${imdbRating}\tRT: ${tomatoesRating}\tMC: ${metacriticRating}\n`;
             cacheItem.push(result);
         }
         api.sendMessage(message, event.thread_id);
