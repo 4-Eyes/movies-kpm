@@ -308,7 +308,7 @@ exports.run = (api, event) => {
             });
         return;
     }
-    if (isEmptyOrSpaces(words)) {
+    if (isEmptyOrSpaces(title)) {
         return;
     }
     movieDB.searchMovie({ query: title }, (err, res) => {
