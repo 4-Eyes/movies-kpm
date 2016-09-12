@@ -2,11 +2,12 @@
   "name": "movies",
   "version": 1.03,
   "startup": "movies.js",
-  "command": "movies", 
+  "command": "movies",
   "help": [
     [
       "{{commandPrefix}}movies {movie title}",
-      "Searches for the given movie and returns details on it if it can find it."
+      "Searches for the given movie and returns details on it if it can find it.",
+      "Searches for the given movie and returns details on it if it can find it. See '{{commandPrefix}}movies --help' for more information."
     ]
   ]
 }

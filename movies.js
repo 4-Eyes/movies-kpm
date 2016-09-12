@@ -10,7 +10,7 @@ let options = [
         {
             long: '--key',
             short: '-k',
-            description: 'Sets the TMDB API key',
+            description: 'Sets the TMDB API key.',
             expects: ['<string>KEY'],
             run : (values) => {
                 exports.config.APIKey = values[0];
@@ -20,33 +20,33 @@ let options = [
         {
             long: '--search',
             short: '-s',
-            description: 'Returns search results for a title',
+            description: 'Returns search results for a title.',
             config: true
         },
         {
             long: '--searchResponse',
             short: '-sr',
-            description: 'Returns details on the movie specified by the results number based on numbering of the last search on the thread the command comes from',
+            description: 'Returns details on the movie specified by the results number based on\n\t\tnumbering of the last search on the thread the command comes from.',
             expects: ['<int>RESULTNO'],
             config: true
         },
         {
             long: '--recommend',
             short: '-r',
-            description: 'Recommends you a movie',
+            description: 'Recommends you a movie.',
             config: true
         },
         {
             long: '--year',
             short: '-y',
-            description: 'Filters movies by the specified year',
+            description: 'Filters movies by the specified year.',
             expects:['<int>YEAR'],
             config: true
         },
         {
             long: '--coming',
             short: '-c',
-            description: 'Gives results of movies coming soon. Currently this will only work for NZ',
+            description: 'Gives results of movies coming soon. Currently this will only work for NZ.',
             config: true
         },
 		{
@@ -56,13 +56,13 @@ let options = [
 			run: (values) => {
 				let api = values[0],
 					event = values[1],
-					result = 'USAGE\n\t' + api.commandPrefix + 'movies ' + '<options...> <searchString>'.cyan + '\nOPTIONS';
+					result = 'USAGE\n\t' + api.commandPrefix + 'movies ' + '<options...> <searchString>' + '\nOPTIONS';
                 for (let i = 0; i < options.length; i++) {
                     let infoStr = '\t' + options[i].short + ', ' + options[i].long;
                     if (options[i].expects) {
                         infoStr += ' ';
                         for (let j = 0; j < options[i].expects.length; j++) {
-                            infoStr += '{' + options[i].expects[j].yellow + '} ';
+                            infoStr += '{' + options[i].expects[j] + '} ';
                         }
                     }
 					result += '\n' + infoStr + '\n\t\t' + options[i].description;
