@@ -48,7 +48,29 @@ let options = [
             short: '-c',
             description: 'Gives results of movies coming soon. Currently this will only work for NZ',
             config: true
-        }
+        },
+		{
+			long: '--help',
+			short: '-h',
+			description: 'Shows help for this module.',
+			run: (values) => {
+				let api = values[0],
+					event = values[1],
+					result = 'USAGE\n\t' + api.commandPrefix + 'movies ' + '<options...> <searchString>'.cyan + '\nOPTIONS';
+                for (let i = 0; i < options.length; i++) {
+                    let infoStr = '\t' + options[i].short + ', ' + options[i].long;
+                    if (options[i].expects) {
+                        infoStr += ' ';
+                        for (let j = 0; j < options[i].expects.length; j++) {
+                            infoStr += '{' + options[i].expects[j].yellow + '} ';
+                        }
+                    }
+					result += '\n' + infoStr + '\n\t\t' + options[i].description;
+                }
+				api.sendMessage(result, event.thread_id);
+				return true;
+			}
+		}
     ];
 
 const error = (api, event, err) => {
@@ -130,7 +152,10 @@ exports.run = (api, event) => {
         vals.push(api);
         vals.push(event);
         if (pargs[0].run) {
-            pargs[0].run(vals);
+            let res = pargs[0].run(vals);
+			if (res) {
+				return;
+			}
         }
         else if (pargs[0].config) {
             if (!pargs[0].expects) {
