@@ -1,9 +1,11 @@
 ﻿let request = require('request'),
     omdb = require('omdb'),
     movieDBFunction = require('moviedb'),
+    async = require('async'),
     flicks = require("./src/flicks.js")(request),
     movieDB = null,
     searchCache = {},
+    comingSoonCache = {},
     sortBy = require("./src/sorting.js")();
 
 let options = [
@@ -11,7 +13,7 @@ let options = [
             long: '--key',
             short: '-k',
             description: 'Sets the TMDB API key.',
-            expects: ['<string>KEY'],
+            expects: ['KEY'],
             run : (values) => {
                 exports.config.APIKey = values[0];
                 values[1].sendMessage(`Successfully added the API Key: ${values[0]}`, values[2].thread_id);
@@ -27,7 +29,7 @@ let options = [
             long: '--searchResponse',
             short: '-sr',
             description: 'Returns details on the movie specified by the results number based on\n\t\tnumbering of the last search on the thread the command comes from.',
-            expects: ['<int>RESULTNO'],
+            expects: ['RESULTNO'],
             config: true
         },
         {
@@ -40,13 +42,20 @@ let options = [
             long: '--year',
             short: '-y',
             description: 'Filters movies by the specified year.',
-            expects:['<int>YEAR'],
+            expects:['YEAR'],
             config: true
         },
         {
             long: '--coming',
             short: '-c',
             description: 'Gives results of movies coming soon. Currently this will only work for NZ.',
+            config: true
+        },
+        {
+            long: '--cResult',
+            short: '-cr',
+            description: 'Gives more detail on a previous coming soon results set',
+            expects:['RESULTNO'],
             config: true
         },
 		{
@@ -77,6 +86,10 @@ const error = (api, event, err) => {
     api.sendMessage(`There was an error: ${err}`, event.thread_id);
 };
 
+function isEmptyOrSpaces(str) {
+    return str === null || str.match(/^ *$/) !== null;
+}
+
 const performChecks = function (api, event, sessConfig) {
     if ((!event.arguments || event.arguments.length === 0) && Object.keys(sessConfig).length === 0 && sessConfig.constructor === Object) {
         api.sendMessage("Well you didn't tell me to do anything so I shant.", event.thread_id);
@@ -101,30 +114,113 @@ const formatSearch = function(results) {
     return message;
 }
 
-const sendMovieData = (api, event, imdbID) =>
-{
+const getMovieData = (imdbID, callback) => {
     omdb.get({ imdb: imdbID },
-        { tomatoes: true },
+        { tomatoes: true }, callback);
+}
+
+const sendComingSoon = function (api, event, results) {
+    let r = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
+    let message = "";
+    let requests = [];
+    for (let i = 0; i < results.length; i++) {
+        let result = results[i];
+        let release = new Date(result.releaseDate);
+        if (isNaN(release.getTime())) {
+            let match = result.releaseDate.match(r);
+            release = new Date(match[1] +
+                "-" +
+                (match[2] === '99' ? '12' : match[2]) +
+                "-" +
+                (match[3] === '99' ? '31' : match[3])); // not a great way of doing it as if the month is valid and has less than 31 days it will go to the next month
+        }
+        if ((release - new Date()) / 86400000 <= 7 && !result.title.contains('3D')) { // 86400000 is the number of milliseconds in a day. Also ignore #D titles as they double up
+            requests.push(function (callback) {
+                movieDB.searchMovie({ query: result.title.replace(/ \([0-9]{4}\)$/, ""), year: new Date().getFullYear().toString()}, function(err, res) {
+                    if (err) {
+                        callback(new Error("Failed to search for movie " + result.title));
+                        return;
+                    }
+                    res.results.sort((a, b) => b.popularity - a.popularity);
+                    if (res.total_results === 0) {
+                        callback(null, null);
+                        return;
+                    }
+                    movieDB.movieInfo({ id: res.results[0].id, append_to_response: "external_ids" }, (er, rs) => {
+                        if (er) {
+                            callback(new Error("Failed to get TMDb data for the title"));
+                            return;
+                        }
+                        if (!rs.imdb_id) {
+                            callback(null, null);
+                            return;
+                        }
+                        getMovieData(rs.imdb_id,
+                            (e, r) => {
+                                if (e) {
+                                    callback(new Error("Failed to get OMDb data for the title"));
+                                    return;
+                                }
+                                callback(null, !r ? null : r);
+                            });
+                    });
+                });
+            });
+        }
+    }
+    async.parallel(requests, function (err, res) {
+        if (err) {
+            error(api, event, err);
+            return;
+        }
+        var message = "";
+        var numMin = 0;
+        var cacheItem = [];
+        for (let i = 0; i < res.length; i++) {
+            let result = res[i];
+            if (result === null) {
+                numMin++;
+                continue;
+            }
+            let imdbRating = result.imdb.rating ? result.imdb.rating : 'N/A';
+            let tomatoesRating = result.tomato ? `${result.tomato.meter}%` : 'N/A';
+            let metacriticRating = result.metacritic ? result.metacritic : 'N/A';
+            message += `${i + 1 - numMin}) ${result.title}\t$IMDb: ${imdbRating}\tRT: ${tomatoesRating}\tMC: ${metacriticRating}\n`;
+            cacheItem.push(result);
+        }
+        api.sendMessage(message, event.thread_id);
+        comingSoonCache[event.thread_id] = cacheItem;
+    });
+}
+
+const sendMovieData = (api, event, movie) =>
+{
+    api.sendImage('url', movie.poster, '', event.thread_id);
+
+    let imdbRating = movie.imdb.rating;
+    let tomatoesRating = movie.tomato ? `${movie.tomato.meter}%` : 'N/A';
+    let metacriticRating = movie.metacritic ? movie.metacritic : 'N/A';
+
+    setTimeout(() => { // try let the image render first
+        let message = `${movie.title}\n------------------------------------\n${movie.plot}\n\n`;
+        message += `IMDB Rating: \t${imdbRating}\tRottenTomatoes: \t${tomatoesRating}\n`;
+        message += `Metacritic:  \t${metacriticRating}\tRuntime:        \t${movie.runtime} mins\n`;
+
+        api.sendMessage(message, event.thread_id);
+    }, 200);
+}
+
+const sendIMDbMovieData = (api, event, imdbID) =>
+{
+    getMovieData(imdbID,
         (err, movie) => {
             if (err) {
                 error(api, event, err);
                 return;
             }
-
-            api.sendImage('url', movie.poster, '', event.thread_id);
-
-            let imdbRating = movie.imdb.rating;
-            let tomatoesRating = movie.tomato ? `${movie.tomato.meter}%` : 'N/A';
-            let metacriticRating = movie.metacritic ? movie.metacritic : 'N/A';
-
-            setTimeout(() => { // try let the image render first
-                let message = `${movie.title}\n------------------------------------\n${movie.plot}\n\n`;
-                message += `IMDB Rating: \t${imdbRating}\tRottenTomatoes: \t${tomatoesRating}\n`;
-                message += `Metacritic:  \t${metacriticRating}\tRuntime:        \t${movie.runtime} mins\n`;
-
-                api.sendMessage(message, event.thread_id);
-            }, 200);
-        });
+            sendMovieData(api, event, movie);
+        }
+    );
 }
 
 exports.run = (api, event) => {
@@ -174,8 +270,27 @@ exports.run = (api, event) => {
     if (!performChecks(api, event, sessionConfig)) return;
 
 
-    if (sessionConfig['-r'] || sessionConfig['c']) {
+    if (sessionConfig['-r']) {
         error(api, event, "This hasn't been implemented yet. Blame the lazy devs.");
+        return;
+    }
+    if (sessionConfig['-c']) {
+        api.sendMessage('"I am just going outside and may be some time"', event.thread_id);
+        flicks.getComingSoon((e, r) => {
+            if (e) {
+                error(api, event, e);
+            }
+            sendComingSoon(api, event, JSON.parse(r.body).items);
+        });
+        return;
+    }
+    if (sessionConfig['-cr']) {
+        let index = parseInt(sessionConfig['-cr']) - 1;
+        if (!index || index === NaN || index >= comingSoonCache[event.thread_id].length) {
+            error(api, event, "Well that's not a number or it's an invalid number. Silly person.")
+            return;
+        }
+        sendMovieData(api, event, comingSoonCache[event.thread_id][index]);
         return;
     }
     if (sessionConfig['-sr']) {
@@ -189,8 +304,11 @@ exports.run = (api, event) => {
                 if (er) {
                     error(api, event, er);
                 }
-                sendMovieData(api, event, rs.imdb_id);
+                sendIMDbMovieData(api, event, rs.imdb_id);
             });
+        return;
+    }
+    if (isEmptyOrSpaces(words)) {
         return;
     }
     movieDB.searchMovie({ query: title }, (err, res) => {
@@ -227,7 +345,7 @@ exports.run = (api, event) => {
                         error(api, event, err1);
                         return;
                     }
-                    sendMovieData(api, event, res1.imdb_id);
+                    sendIMDbMovieData(api, event, res1.imdb_id);
                 });
         } else {
             error(api, event, "No results for the movie title given");
