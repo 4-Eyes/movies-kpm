@@ -185,7 +185,7 @@ const sendComingSoon = function (api, event, results) {
             let imdbRating = result.imdb.rating ? result.imdb.rating : 'N/A';
             let tomatoesRating = result.tomato ? `${result.tomato.meter}%` : 'N/A';
             let metacriticRating = result.metacritic ? result.metacritic : 'N/A';
-            message += `${i + 1 - numMin}) ${result.title}\tIMDb: ${imdbRating}\tRT: ${tomatoesRating}\tMC: ${metacriticRating}\n`;
+            message += `${i + 1 - numMin}) ${result.title}\n\tIMDb: ${imdbRating}    RT: ${tomatoesRating}    MC: ${metacriticRating}\n`;
             cacheItem.push(result);
         }
         api.sendMessage(message, event.thread_id);
@@ -207,7 +207,7 @@ const sendMovieData = (api, event, movie) =>
         message += `Metacritic:  \t${metacriticRating}\tRuntime:        \t${movie.runtime} mins\n`;
 
         api.sendMessage(message, event.thread_id);
-    }, 200);
+    }, 500);
 }
 
 const sendIMDbMovieData = (api, event, imdbID) =>
