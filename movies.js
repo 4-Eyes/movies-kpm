@@ -197,7 +197,7 @@ const sendMovieData = (api, event, movie) =>
 {
     api.sendImage('url', movie.poster, '', event.thread_id);
 
-    let imdbRating = movie.imdb.rating;
+    let imdbRating = movie.imdb.rating ? movie.imdb.rating : 'N/A';
     let tomatoesRating = movie.tomato ? `${movie.tomato.meter}%` : 'N/A';
     let metacriticRating = movie.metacritic ? movie.metacritic : 'N/A';
 
@@ -275,7 +275,7 @@ exports.run = (api, event) => {
         return;
     }
     if (sessionConfig['-c']) {
-        api.sendMessage('"I am just going outside and may be some time"', event.thread_id);
+//        api.sendMessage('"I am just going outside and may be some time"', event.thread_id);
         flicks.getComingSoon((e, r) => {
             if (e) {
                 error(api, event, e);
@@ -285,8 +285,8 @@ exports.run = (api, event) => {
         return;
     }
     if (sessionConfig['-cr']) {
-        let index = parseInt(sessionConfig['-cr']) - 1;
-        if (!index || index === NaN || index >= comingSoonCache[event.thread_id].length) {
+        let index = parseInt(sessionConfig['-cr'][0]) - 1;
+        if (index === NaN || index >= comingSoonCache[event.thread_id].length) {
             error(api, event, "Well that's not a number or it's an invalid number. Silly person.")
             return;
         }
@@ -294,8 +294,8 @@ exports.run = (api, event) => {
         return;
     }
     if (sessionConfig['-sr']) {
-        let index = parseInt(sessionConfig['-sr']) - 1;
-        if (!index || index === NaN || index >= searchCache[event.thread_id].length) {
+        let index = parseInt(sessionConfig['-sr'][0]) - 1;
+        if (index === NaN || index >= searchCache[event.thread_id].length) {
             error(api, event, "Well that's not a number or it's an invalid number. Silly person.")
             return;
         }
