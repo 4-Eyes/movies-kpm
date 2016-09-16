@@ -58,6 +58,12 @@ let options = [
             expects:['RESULTNO'],
             config: true
         },
+        {
+            long: '--trailer',
+            short: '-t',
+            description: 'Gets the trailer for a movie.',
+            config: true
+        },
 		{
 			long: '--help',
 			short: '-h',
@@ -316,6 +322,7 @@ exports.run = (api, event) => {
             error(api, event, err);
             return;
         }
+
         if (res.results.length > 0) {
             if (sessionConfig['-y']) {
                 res.results.sort(sortBy(
@@ -339,6 +346,31 @@ exports.run = (api, event) => {
                 api.sendMessage(message, event.thread_id);
                 return;
             }
+
+            if (sessionConfig['-t']) {
+                movieDB.movieVideos({ id: res.results[0].id, append_to_response: "external_ids" }, (err1, res1) => {
+                    if (err1) {
+                        error(api, event, err1);
+                        return;
+                    }
+                    let trailer = null;
+                    for (let vid of res1.results) {
+                        if (vid.type === 'Trailer' && vid.site === 'YouTube') {
+                            trailer = 'https://www.youtube.com/watch?v=' + vid.key;
+                            break;
+                        }
+                    }
+
+                    if (trailer === null) {
+                        api.sendMessage('No trailer found.', event.thread_id);
+                    }
+                    else {
+                        api.sendMessage(trailer, event.thread_id);
+                    }
+                });
+                return;
+            }
+
             movieDB.movieInfo({ id: res.results[0].id, append_to_response: "external_ids" },
                 (err1, res1) => {
                     if (err1) {
