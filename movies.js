@@ -230,8 +230,12 @@ const sendIMDbMovieData = (api, event, imdbID) =>
     );
 }
 
+const foo = (e, r) => {
+    console.log(r);
+}
+
 exports.run = (api, event) => {
-    imdb.getMovieDetails("tt0078748", (e, r) => { console.log(r); });
+    imdb.getMovieDetails("tt0078748", foo);
     return;
     let sessionConfig = {};
     for (let i = 1; i < event.arguments.length; i++) {
