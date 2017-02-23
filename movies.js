@@ -3,6 +3,7 @@
     movieDBFunction = require('moviedb'),
     async = require('async'),
     flicks = require("./src/flicks.js")(request),
+    imdb = require("./src/imdb.js")(request),
     movieDB = null,
     searchCache = {},
     comingSoonCache = {},
@@ -230,6 +231,8 @@ const sendIMDbMovieData = (api, event, imdbID) =>
 }
 
 exports.run = (api, event) => {
+    imdb.getMovieDetails("tt0078748", (e, r) => { console.log(r); });
+    return;
     let sessionConfig = {};
     for (let i = 1; i < event.arguments.length; i++) {
         let arg = event.arguments[i],
